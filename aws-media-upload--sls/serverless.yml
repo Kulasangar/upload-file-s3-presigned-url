@@ -1,0 +1,84 @@
+service: presignedurl-serverless
+
+custom:
+  currentStage: ${opt:stage, self:provider.stage}
+  region: ${opt:region, 'us-west-2'}
+  bucketName: tellabout-media-#{AWS::AccountId}-${self:custom.currentStage}
+  myDomain: 'localhost'
+  graphqlPath: graphql
+
+provider:
+  region: ${self:custom.region}
+  name: aws
+  runtime: nodejs12.x
+  iamRoleStatements:
+    -  Effect: "Allow"
+       Action:
+         - "s3:PutObject"
+       Resource:
+         Fn::Join:
+           - ""
+           - - "arn:aws:s3:::"
+             - Ref: UploadBucket
+
+plugins:
+  - serverless-pseudo-parameters
+
+package:
+  individually: true
+  exclude:
+    - ".serverless/**"
+    - "*.*"
+
+functions:
+  PresignedUrlHandler:
+    handler: presigned_url_generation.handler
+    package:
+      include:
+        - presigned_url_generation.js
+    events:
+      - http:
+          path: ${self:custom.graphqlPath}
+          method: get
+          cors: true
+    environment:
+      S3_BUCKET_NAME: ${self:custom.bucketName}
+
+# Add VPC and Aurora Postgress
+resources:
+  Resources:
+    UploadBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.bucketName}
+        AccessControl: Private
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: false
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        CorsConfiguration:
+          CorsRules:
+          - AllowedMethods:
+            - GET
+            - PUT
+            - POST
+            - HEAD
+            AllowedOrigins:
+            - "*"
+            AllowedHeaders:
+            - "*"
+    UploadBucketPolicy:
+      Type: 'AWS::S3::BucketPolicy'
+      Properties:
+        PolicyDocument:
+          Statement:
+            - Sid: PublicReadForGetBucketObjects
+              Effect: Allow
+              Principal: '*'
+              Action:
+                - 's3:GetObject'
+                - 's3:PutObject'
+              Resource: arn:aws:s3:::${self:custom.bucketName}/*
+        Bucket:
+          Ref: UploadBucket
