@@ -3,9 +3,9 @@ service: presignedurl-serverless
 custom:
   currentStage: ${opt:stage, self:provider.stage}
   region: ${opt:region, 'us-west-2'}
-  bucketName: tellabout-media-#{AWS::AccountId}-${self:custom.currentStage}
+  bucketName: presignedurl-test-#{AWS::AccountId}-${self:custom.currentStage}
   myDomain: 'localhost'
-  graphqlPath: graphql
+  path: s3upload
 
 provider:
   region: ${self:custom.region}
@@ -38,7 +38,7 @@ functions:
         - presigned_url_generation.js
     events:
       - http:
-          path: ${self:custom.graphqlPath}
+          path: ${self:custom.path}
           method: get
           cors: true
     environment:
