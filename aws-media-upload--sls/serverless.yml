@@ -44,7 +44,6 @@ functions:
     environment:
       S3_BUCKET_NAME: ${self:custom.bucketName}
 
-# Add VPC and Aurora Postgress
 resources:
   Resources:
     UploadBucket:
